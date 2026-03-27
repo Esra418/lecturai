@@ -17,7 +17,10 @@
    - Doğruysa → sonraki soru
    - Yanlışsa → "Bu konuya git →" butonu çıkar, o saniyeye yönlendirir
 10. Test biter → skor ekranı görünür
-
+11. **Paylaşım ve Sosyal Etkileşim:**
+    - Kullanıcı, sonuç ekranında veya sınav bitiminde "Çalışma Grubuna Gönder" butonuna tıklar.
+    - Uygulama, o analize ait özel bir URL oluşturur ve "Link başarıyla kopyalandı! Discord veya WhatsApp grubuna yapıştırabilirsin 🚀" bildirimiyle panoya kopyalar.
+    - Kullanıcı, sınav skorunu veya kritik dakikaları tek tıkla arkadaşlarıyla paylaşır.
 ## Hata Durumları
 - Geçersiz link → "Lütfen geçerli bir YouTube linki girin"
 - API hatası → "Bir sorun oluştu, tekrar deneyin"
