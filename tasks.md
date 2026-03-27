@@ -14,7 +14,7 @@
 - [ ] Mobil uyumlu layout yap
 
 ## Görev 3: Gemini API entegrasyonu
-- [ ] YouTube URL'den ses dosyası çek
+- [ ] YouTube Video ID kullanarak transkript verisini çek (eğer video transkripti yoksa Gemini'ye videoyu özetlemesi için alternatif bir API akışı kur).
 - [ ] Sesi Gemini API'ye gönder
 - [ ] Zaman damgalı transkript al
 - [ ] Transkripti ekranda göster
