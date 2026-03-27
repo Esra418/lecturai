@@ -14,7 +14,7 @@ zamanı kısıtlı öğrenciler.
 1. Kullanıcının yapıştırdığı YouTube linkindeki sesi Gemini API ile
    metne dönüştürür ve zaman damgaları (timestamp) üretir.
 2. Transkripti analiz ederek "Burası sınavda çıkar", "Bunu unutmayın"
-   gibi vurguları tespit eder ve "Kritik Dakika" etiketi ekler.
+   gibi vurguları tespit eder ve "Kritik Dakika" (Semantic Highlight) etiketi ekler.
 3. Her özet maddesini videonun ilgili saniyesine bağlayan deep-link
    navigasyon oluşturur.
 4. Videodan 5 soruluk kişiselleştirilmiş sınav simülatörü üretir;
