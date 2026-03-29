@@ -253,15 +253,39 @@ function StudyNotesSection({ notes, summary, videoId }: { notes?: StudyNotes; su
 }
 
 // ── Quiz Setup ───────────────────────────────────────────────────────────────
+// ── Quiz Setup ───────────────────────────────────────────────────────────────
 function QuizSetup({
-  maxQuestions,
   onStart,
 }: {
-  maxQuestions: number;
   onStart: (count: number, difficulty: "kolay" | "orta" | "zor" | "karisik") => void;
 }) {
-  const [count, setCount] = useState(Math.min(5, maxQuestions));
+  const [count, setCount] = useState(10);
+  const [inputValue, setInputValue] = useState("10");
   const [difficulty, setDifficulty] = useState<"kolay" | "orta" | "zor" | "karisik">("karisik");
+
+  const MAX = 50;
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setInputValue(e.target.value);
+    const val = parseInt(e.target.value);
+    if (!isNaN(val) && val >= 1 && val <= MAX) {
+      setCount(val);
+    }
+  }
+
+  function handleInputBlur() {
+    const val = parseInt(inputValue);
+    if (isNaN(val) || val < 1) {
+      setCount(1);
+      setInputValue("1");
+    } else if (val > MAX) {
+      setCount(MAX);
+      setInputValue(String(MAX));
+    } else {
+      setCount(val);
+      setInputValue(String(val));
+    }
+  }
 
   const difficultyOptions = [
     { value: "kolay" as const, label: "😌 Kolay", desc: "Temel kavramlar" },
@@ -278,42 +302,42 @@ function QuizSetup({
         <div>
           <p className="text-xs font-semibold text-indigo-400 mb-1">Koçun önerisi</p>
           <p className="text-sm text-zinc-300">
-            {maxQuestions >= 10
-              ? "Bu video yeterince kapsamlı. 10 soruyla başla, zorla kendini!"
-              : `Bu videodan ${maxQuestions} soru çıkarabildim. Hepsini çözmeni öneririm.`}
+            Kısa sınavlar için 10, kapsamlı çalışma için 20-30 soru öneririm. Max 50 soru seçebilirsin!
           </p>
         </div>
       </div>
 
-     {/* Soru sayısı */}
+      {/* Soru sayısı */}
       <div className="mb-6">
         <label className="mb-3 block text-sm font-medium text-zinc-200">
-          Soru sayısı
+          Soru sayısı <span className="text-zinc-500 text-xs">(1-50)</span>
         </label>
         <div className="flex items-center gap-3">
           <input
             type="range"
             min={1}
-            max={maxQuestions}
+            max={MAX}
             value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              setCount(val);
+              setInputValue(String(val));
+            }}
             className="flex-1 accent-indigo-500"
           />
           <input
             type="number"
             min={1}
-            max={maxQuestions}
-            value={count}
-            onChange={(e) => {
-              const val = Math.min(maxQuestions, Math.max(1, Number(e.target.value)));
-              if (!isNaN(val)) setCount(val);
-            }}
+            max={MAX}
+            value={inputValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
             className="w-16 rounded-xl border border-white/15 bg-zinc-900 px-3 py-2 text-center text-sm font-semibold text-indigo-400 outline-none focus:border-indigo-400/70"
           />
         </div>
         <div className="mt-1 flex justify-between text-xs text-zinc-500">
           <span>1</span>
-          <span>{maxQuestions}</span>
+          <span>50</span>
         </div>
       </div>
 
@@ -344,6 +368,213 @@ function QuizSetup({
       >
         Sınavı Başlat 🎯
       </button>
+    </div>
+  );
+}
+
+// ── Quiz ─────────────────────────────────────────────────────────────────────
+function QuizSection({
+  questions,
+  videoId,
+  transcriptText,
+}: {
+  questions: Question[];
+  videoId: string;
+  transcriptText: string;
+}) {
+  const [phase, setPhase] = useState<"setup" | "quiz" | "finished" | "requiz">("setup");
+  const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [wrongQuestions, setWrongQuestions] = useState<Question[]>([]);
+  const [requizRound, setRequizRound] = useState(0);
+  const [requizLoading, setRequizLoading] = useState(false);
+  const [difficulty, setDifficulty] = useState<"kolay" | "orta" | "zor" | "karisik">("karisik");
+
+  function handleStart(count: number, diff: "kolay" | "orta" | "zor" | "karisik") {
+    const shuffled = [...questions].sort(() => Math.random() - 0.5).slice(0, count);
+    setActiveQuestions(shuffled);
+    setDifficulty(diff);
+    setCurrent(0);
+    setSelected(null);
+    setScore(0);
+    setWrongQuestions([]);
+    setRequizRound(0);
+    setPhase("quiz");
+  }
+
+  async function handleRequiz() {
+    if (requizRound >= 3) return;
+    setRequizLoading(true);
+    try {
+      const res = await fetch("/api/requiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wrongTopics: wrongQuestions.map((q) => ({
+            question: q.question,
+            correctAnswer: q.options[q.correct],
+            timestamp: q.timestamp,
+          })),
+          transcript: transcriptText,
+          difficulty,
+          round: requizRound + 1,
+        }),
+      });
+      const data = await res.json();
+      if (data.questions && Array.isArray(data.questions)) {
+        setActiveQuestions(data.questions);
+        setCurrent(0);
+        setSelected(null);
+        setScore(0);
+        setWrongQuestions([]);
+        setRequizRound((r) => r + 1);
+        setPhase("quiz");
+      }
+    } catch {
+      // sessizce geç
+    } finally {
+      setRequizLoading(false);
+    }
+  }
+
+  if (phase === "setup") {
+    return <QuizSetup onStart={handleStart} />;
+  }
+
+  if (phase === "finished") {
+    const pct = Math.round((score / activeQuestions.length) * 100);
+    const hasWrong = wrongQuestions.length > 0;
+    const canRequiz = hasWrong && requizRound < 3;
+
+    return (
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-center">
+        <div className="text-5xl mb-4">{pct === 100 ? "🏆" : pct >= 60 ? "💪" : "📚"}</div>
+        <h3 className="text-2xl font-bold text-white">Sınav Bitti!</h3>
+        <p className="mt-3 text-5xl font-semibold text-indigo-300">{score} / {activeQuestions.length}</p>
+
+        {requizRound > 0 && (
+          <p className="mt-2 text-xs text-zinc-500">{requizRound}. tekrar turu</p>
+        )}
+
+        <div className="mt-5 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-4 text-left flex gap-3">
+          <span className="text-xl">🎓</span>
+          <p className="text-sm text-zinc-300">
+            {pct === 100
+              ? "Mükemmel! Tüm soruları doğru bildin. Bu videoyu tam anlamışsın!"
+              : pct >= 60
+              ? "İyi iş! Yanlış cevapladığın konuları tekrar çalışmanı öneririm."
+              : "Henüz hazır değilsin. Kritik dakikaları bir daha izle ve tekrar dene."}
+          </p>
+        </div>
+
+        {hasWrong && (
+          <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/5 p-3 text-left">
+            <p className="text-xs text-rose-300 font-medium mb-1">Yanlış yaptığın konular:</p>
+            <ul className="space-y-1">
+              {wrongQuestions.map((q, i) => (
+                <li key={i} className="text-xs text-zinc-400">• {q.question.slice(0, 60)}...</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-3 justify-center">
+          <button onClick={() => setPhase("setup")}
+            className="rounded-xl border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/10">
+            Ayarları Değiştir
+          </button>
+          <button onClick={() => handleStart(activeQuestions.length, difficulty)}
+            className="rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-5 py-2 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/20">
+            Aynı Soruları Tekrar Çöz
+          </button>
+          {canRequiz && (
+            <button
+              onClick={handleRequiz}
+              disabled={requizLoading}
+              className="rounded-xl bg-indigo-500 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:bg-zinc-700 disabled:text-zinc-400"
+            >
+              {requizLoading
+                ? "Yeni sorular hazırlanıyor…"
+                : `Yanlış Konulardan Yeni Sorular (${3 - requizRound} hak kaldı)`}
+            </button>
+          )}
+          {hasWrong && requizRound >= 3 && (
+            <p className="w-full text-xs text-zinc-500 text-center">
+              Maksimum tekrar hakkına ulaştın. Bu konuları videoda tekrar izlemeyi dene.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const q = activeQuestions[current];
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
+      {requizRound > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2">
+          <p className="text-xs text-amber-300">🔄 {requizRound}. tekrar turu — yanlış yaptığın konulardan yeni sorular</p>
+        </div>
+      )}
+      <div className="mb-5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+          style={{ width: `${(current / activeQuestions.length) * 100}%` }} />
+      </div>
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-xs text-zinc-400">Soru {current + 1} / {activeQuestions.length}</span>
+        <span className="text-xs text-indigo-300">Skor: {score}</span>
+      </div>
+      <p className="text-base font-medium text-white">{q.question}</p>
+      <ul className="mt-4 space-y-2">
+        {q.options.map((opt, idx) => {
+          let cls = "w-full rounded-xl border px-4 py-3 text-left text-sm transition ";
+          if (selected === null) cls += "border-white/15 bg-white/5 text-zinc-200 hover:bg-white/10";
+          else if (idx === q.correct) cls += "border-emerald-400/60 bg-emerald-500/15 text-emerald-200";
+          else if (idx === selected) cls += "border-rose-400/60 bg-rose-500/15 text-rose-200";
+          else cls += "border-white/10 bg-white/5 text-zinc-500";
+          return (
+            <li key={idx}>
+              <button className={cls} onClick={() => {
+                if (selected !== null) return;
+                setSelected(idx);
+                if (idx === q.correct) {
+                  setScore((s) => s + 1);
+                } else {
+                  setWrongQuestions((prev) => [...prev, q]);
+                }
+              }}>{opt}</button>
+            </li>
+          );
+        })}
+      </ul>
+      {selected !== null && (
+        <div className="mt-4 space-y-3">
+          {(q as any).explanation && (
+            <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-2">
+              <p className="text-xs text-emerald-300">💡 {(q as any).explanation}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            {selected !== q.correct && (
+              <a href={youtubeDeepLink(videoId, q.timestamp)} target="_blank" rel="noreferrer"
+                className="rounded-xl border border-indigo-400/40 bg-indigo-500/10 px-4 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20">
+                Bu konuya git →
+              </a>
+            )}
+            <button
+              onClick={() => {
+                if (current + 1 >= activeQuestions.length) setPhase("finished");
+                else { setCurrent((c) => c + 1); setSelected(null); }
+              }}
+              className="ml-auto rounded-xl bg-indigo-500 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-400">
+              {current + 1 >= activeQuestions.length ? "Sonucu Gör" : "Sonraki Soru →"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
