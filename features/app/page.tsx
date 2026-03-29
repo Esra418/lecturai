@@ -566,7 +566,16 @@ function QuizSection({
             )}
             <button
               onClick={() => {
-                if (current + 1 >= activeQuestions.length) setPhase("finished");
+                if (current + 1 >= activeQuestions.length) {
+  setPhase("finished");
+  saveQuizRecord({
+    videoId: videoId,
+    score: idx === q.correct ? score + 1 : score,
+    total: activeQuestions.length,
+    date: new Date().toISOString(),
+    wrongTopics: wrongQuestions.map((wq) => wq.question.slice(0, 50)),
+  });
+}
                 else { setCurrent((c) => c + 1); setSelected(null); }
               }}
               className="ml-auto rounded-xl bg-indigo-500 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-400">
