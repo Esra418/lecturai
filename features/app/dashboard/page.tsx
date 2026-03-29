@@ -189,7 +189,7 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
                 <p className="text-zinc-500 text-sm">Henüz sınav çözmedin.</p>
                <button onClick={() => router.push("/?tab=sinav")} className="mt-3 text-xs text-indigo-400 hover:text-indigo-300">
-  Sınav çöz →
+  Video analiz et →
 </button>
               </div>
             ) : (
