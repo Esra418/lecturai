@@ -285,19 +285,32 @@ function QuizSetup({
         </div>
       </div>
 
-      {/* Soru sayısı */}
+     {/* Soru sayısı */}
       <div className="mb-6">
         <label className="mb-3 block text-sm font-medium text-zinc-200">
-          Soru sayısı — <span className="text-indigo-400 font-semibold">{count}</span>
+          Soru sayısı
         </label>
-        <input
-          type="range"
-          min={1}
-          max={maxQuestions}
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value))}
-          className="w-full accent-indigo-500"
-        />
+        <div className="flex items-center gap-3">
+          <input
+            type="range"
+            min={1}
+            max={maxQuestions}
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="flex-1 accent-indigo-500"
+          />
+          <input
+            type="number"
+            min={1}
+            max={maxQuestions}
+            value={count}
+            onChange={(e) => {
+              const val = Math.min(maxQuestions, Math.max(1, Number(e.target.value)));
+              if (!isNaN(val)) setCount(val);
+            }}
+            className="w-16 rounded-xl border border-white/15 bg-zinc-900 px-3 py-2 text-center text-sm font-semibold text-indigo-400 outline-none focus:border-indigo-400/70"
+          />
+        </div>
         <div className="mt-1 flex justify-between text-xs text-zinc-500">
           <span>1</span>
           <span>{maxQuestions}</span>
