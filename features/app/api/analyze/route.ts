@@ -12,7 +12,8 @@ import { extractYouTubeVideoId } from "@/lib/youtube";
 
 const bodySchema = z.object({
   url: z.string().min(1),
-  quizCount: z.number().optional().default(5),
+  quizCount: z.number().optional().default(10),
+  difficulty: z.enum(["kolay", "orta", "zor", "karisik"]).optional().default("karisik"),
   customInstructions: z.string().optional(),
 });
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Gerekli alanlar eksik veya hatalı." }, { status: 400 });
   }
 
-  const { url } = parsed.data;
+  const { url, quizCount, difficulty } = parsed.data;
   const videoId = extractYouTubeVideoId(url);
   if (!videoId) {
     return NextResponse.json(
@@ -67,11 +68,10 @@ export async function POST(request: Request) {
   }
 
   const { text: transcriptBlock, truncated: transcriptTruncated } = truncateCuesForModel(cues);
-  console.log("[DEBUG] transcriptBlock.length:", transcriptBlock.length, "cues:", cues.length);
 
   let analysis;
   try {
-    analysis = await runGeminiAnalysis(transcriptBlock);
+    analysis = await runGeminiAnalysis(transcriptBlock, quizCount, difficulty);
   } catch (err) {
     console.error("[analyze]", err);
     return NextResponse.json({ error: "Bir sorun oluştu, tekrar deneyin." }, { status: 502 });
