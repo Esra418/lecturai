@@ -1,5 +1,3 @@
-import { Innertube } from "youtubei.js";
-
 export type TranscriptCue = { startSeconds: number; text: string };
 
 export class TranscriptFetchError extends Error {
@@ -39,61 +37,53 @@ export function truncateCuesForModel(cues: TranscriptCue[]): { text: string; tru
 }
 
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
-  let yt: Awaited<ReturnType<typeof Innertube.create>>;
+  const apiKey = process.env.RAPIDAPI_KEY;
+  if (!apiKey) {
+    throw new TranscriptFetchError("CONFIG_ERROR", "RAPIDAPI_KEY tanımlı değil.");
+  }
+
+  const url = `https://youtube-transcript3.p.rapidapi.com/api/transcript?videoId=${videoId}`;
+
+  let res: Response;
   try {
-    yt = await Innertube.create({
-      retrieve_player: false,
-      generate_session_locally: true,
+    res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-host": "youtube-transcript3.p.rapidapi.com",
+        "x-rapidapi-key": apiKey,
+      },
     });
   } catch {
-    throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "YouTube bağlantısı kurulamadı.");
+    throw new TranscriptFetchError("TRANSCRIPT_UNKNOWN", "Transkript servisine bağlanılamadı.");
   }
 
-  let info: any;
+  if (res.status === 404) {
+    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Bu videoda altyazı bulunamadı. Lütfen altyazısı olan bir video deneyin.");
+  }
+
+  if (!res.ok) {
+    throw new TranscriptFetchError("TRANSCRIPT_UNKNOWN", "Transkript alınırken hata oluştu. Tekrar deneyin.");
+  }
+
+  let data: any;
   try {
-    info = await yt.getInfo(videoId);
+    data = await res.json();
   } catch {
-    throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video bilgisi alınamadı. Video herkese açık olmalı.");
+    throw new TranscriptFetchError("TRANSCRIPT_UNKNOWN", "Transkript verisi okunamadı.");
   }
 
-  // Transkript al
-  let transcriptData: any;
-  try {
-    transcriptData = await info.getTranscript();
-  } catch {
-    throw new TranscriptFetchError(
-      "TRANSCRIPT_MISSING",
-      "Bu videoda altyazı bulunamadı. Lütfen altyazısı olan bir video deneyin."
-    );
-  }
+  // RapidAPI YouTube Transcript response formatı
+  const segments: any[] = data?.transcript ?? data?.results ?? data ?? [];
 
-  if (!transcriptData) {
-    throw new TranscriptFetchError(
-      "TRANSCRIPT_MISSING",
-      "Bu videoda altyazı bulunamadı. Lütfen altyazısı olan bir video deneyin."
-    );
-  }
-
-  // Segmentleri çıkar
-  const segments =
-    transcriptData?.transcript?.content?.body?.initial_segments ??
-    transcriptData?.content?.body?.initial_segments ??
-    [];
-
-  if (!segments || segments.length === 0) {
+  if (!Array.isArray(segments) || segments.length === 0) {
     throw new TranscriptFetchError("TRANSCRIPT_EMPTY", "Altyazı boş döndü.");
   }
 
   const cues: TranscriptCue[] = segments
-    .filter((seg: any) => seg?.snippet?.text)
-    .map((seg: any) => {
-      const startMs = seg.start_ms ?? seg.startMs ?? 0;
-      const startSeconds = Number(startMs) / 1000;
-      const text = (seg.snippet?.text ?? "")
-        .replace(/[\n\r]+/g, " ")
-        .trim();
-      return { startSeconds, text };
-    })
+    .map((seg: any) => ({
+      startSeconds: Number(seg.offset ?? seg.start ?? seg.startTime ?? 0) / 1000,
+      text: String(seg.text ?? seg.content ?? "").replace(/[\n\r]+/g, " ").trim(),
+    }))
     .filter((c: TranscriptCue) => c.text.length > 0);
 
   if (cues.length === 0) {
