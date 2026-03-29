@@ -3,28 +3,42 @@
 ## Teknolojiler
 
 ### Frontend
-- **Next.js** — React tabanlı, hızlı web uygulaması
-- **Tailwind CSS** — modern, mobil uyumlu tasarım
+- **Next.js 16** — React tabanlı, hızlı web uygulaması, App Router
+- **Tailwind CSS** — Modern, mobil uyumlu tasarım
+- **TypeScript** — Tip güvenli kod
 
 ### AI & API
-- **Gemini API** — ses-metin dönüşümü + içerik analizi
-- **Google AI Studio** — ücretsiz API anahtarı buradan alınır
+- **Gemini 2.5 Flash (Google AI Studio)** — Video transkripti analizi, ders notu üretimi, quiz üretimi, AI koç
+- **RapidAPI YouTube Transcript API** — YouTube video transkripti çekme (Türkçe dahil tüm diller)
+
+### Veri Saklama
+- **localStorage** — Kullanıcı profili, video geçmişi, quiz sonuçları, streak verisi (hesap gerekmez)
 
 ### Deploy
-- **Vercel** — Next.js için en uyumlu platform, ücretsiz
+- **Vercel** — Next.js için en uyumlu platform, otomatik GitHub deploy
 
 ### Araçlar
 - **Cursor** — AI destekli kod editörü (agent modu)
-- **GitHub** — versiyon kontrolü ve teslim
+- **GitHub** — Versiyon kontrolü ve teslim
+- **Claude (Anthropic)** — Kod geliştirme ve mimari kararlar
 
 ## Neden Bu Seçimler?
 
 | Teknoloji | Neden? |
 |-----------|--------|
-| Gemini API | Ücretsiz, ses analizi güçlü, brief'e uygun |
-| Next.js | Lovable ve Vercel ile direkt uyumlu |
-| Tailwind | Cursor ile hızlı UI üretimi |
-| Vercel | Tek tıkla deploy, GitHub entegrasyonu |
+| Gemini 2.5 Flash | Ücretsiz, güçlü analiz, uzun transkript desteği |
+| RapidAPI Transcript | Vercel'den YouTube'a erişim sorunu çözdü, Türkçe çalışıyor |
+| Next.js 16 | Vercel ile direkt uyumlu, App Router ile API route'ları kolay |
+| Tailwind CSS | Cursor ile hızlı UI üretimi, mobil uyumlu |
+| localStorage | Hesap gerektirmeden kişiselleştirme, sıfır backend maliyeti |
+| Vercel | Tek tıkla deploy, GitHub entegrasyonu, ücretsiz |
 
-## API Anahtarı
-Google AI Studio → aistudio.google.com → "Get API Key" → ücretsiz
+## API Anahtarları
+- **Gemini:** aistudio.google.com → "Get API Key" → ücretsiz (günlük 50 istek)
+- **RapidAPI:** rapidapi.com → "Youtube Transcript" → ücretsiz plan (aylık 100 istek)
+
+## Environment Variables
+```
+GEMINI_API_KEY=your_gemini_key
+RAPIDAPI_KEY=your_rapidapi_key
+```
