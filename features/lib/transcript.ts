@@ -10,9 +10,6 @@ import {
 
 export type TranscriptCue = { startSeconds: number; text: string };
 
-/**
- * youtube-transcript mixes classic XML (seconds, often fractional) with srv3 (ms integers).
- */
 function cueStartSeconds(offset: number, duration: number): number {
   const offsetInteger = Number.isInteger(offset);
   const durInteger = Number.isInteger(duration);
@@ -37,16 +34,9 @@ const MAX_TRANSCRIPT_CHARS = 120_000;
 
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
   let raw: TranscriptResponse[];
- 
- try {
-  raw = await fetchTranscript(videoId, { lang: "tr" });
-} catch {
   try {
-    raw = await fetchTranscript(videoId, { lang: "en" });
-  } catch {
     raw = await fetchTranscript(videoId);
-  }
-}
+  } catch (err) {
     if (err instanceof YoutubeTranscriptVideoUnavailableError) {
       throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video erişilemiyor veya kaldırılmış olabilir.");
     }
@@ -57,10 +47,7 @@ export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[
       throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Bu video için transkript bulunamadı.");
     }
     if (err instanceof YoutubeTranscriptNotAvailableLanguageError) {
-      throw new TranscriptFetchError(
-        "TRANSCRIPT_LANG",
-        "İstenen dilde transkript yok; başka bir video deneyin.",
-      );
+      throw new TranscriptFetchError("TRANSCRIPT_LANG", "İstenen dilde transkript yok; başka bir video deneyin.");
     }
     if (err instanceof YoutubeTranscriptTooManyRequestError) {
       throw new TranscriptFetchError("TRANSCRIPT_RATE", "YouTube istek sınırı — biraz sonra tekrar deneyin.");
@@ -90,12 +77,8 @@ export function truncateCuesForModel(cues: TranscriptCue[]): { text: string; tru
   }
   let acc = "";
   for (const cue of cues) {
-    const line = `[${Math.floor(cue.startSeconds / 60)}:${Math.floor(cue.startSeconds % 60)
-      .toString()
-      .padStart(2, "0")}] ${cue.text}\n`;
-    if (acc.length + line.length > MAX_TRANSCRIPT_CHARS) {
-      break;
-    }
+    const line = `[${Math.floor(cue.startSeconds / 60)}:${Math.floor(cue.startSeconds % 60).toString().padStart(2, "0")}] ${cue.text}\n`;
+    if (acc.length + line.length > MAX_TRANSCRIPT_CHARS) break;
     acc += line;
   }
   return { text: acc.trimEnd(), truncated: true };
