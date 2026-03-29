@@ -50,8 +50,10 @@ export async function runGeminiAnalysis(
   quizCount: number = 10,
   difficulty: "kolay" | "orta" | "zor" | "karisik" = "karisik"
 ) {
+  const safeQuizCount = Math.min(50, Math.max(1, quizCount));
+
   const difficultyInstruction = {
-    kolay: `Sorular KOLAY seviyede olmalı. Temel tanım ve kavram soruları sor. 
+    kolay: `Sorular KOLAY seviyede olmalı. Temel tanım ve kavram soruları sor.
 Örnek: "X nedir?", "Y'nin amacı nedir?" gibi doğrudan sorular.
 Şıklar arasındaki fark belirgin olsun, yanıltıcı şık kullanma.`,
 
@@ -66,7 +68,7 @@ Yanıltıcı ama mantıklı yanlış şıklar ekle.`,
 
     karisik: `Sorular KARIŞIK zorlukta olmalı:
 - İlk %30'u kolay (temel kavramlar)
-- Orta %40'ı orta (anlama ve uygulama)  
+- Orta %40'ı orta (anlama ve uygulama)
 - Son %30'u zor (analiz ve değerlendirme)
 Her zorluk seviyesinden farklı soru tipleri kullan.`,
   }[difficulty];
@@ -78,14 +80,22 @@ Her zorluk seviyesinden farklı soru tipleri kullan.`,
 Transkript:
 ${transcriptFormatted}
 
+KRİTİK DAKİKA KURALLARI — ÇOK ÖNEMLİ:
+Kritik dakikaları belirlerken SADECE şu iki kriteri kullan:
+1. Öğretmen yeni bir konu başlığına geçtiği an (konu geçişleri)
+2. Öğretmenin sınavda çıkabilir dediği veya özellikle vurguladığı bilgiler
+Giriş, tanıtım, "bugün şunu işleyeceğiz" gibi cümleleri KRİTİK DAKIKA YAPMA.
+Toplam 5-8 kritik dakika yeterli — az ama kaliteli olsun.
+
 SORU ÜRETİM KURALLARI — ÇOK ÖNEMLİ:
-1. SADECE transkriptte geçen konulardan soru üret. Hocanın "gelecek derste şunu işleyeceğiz" gibi duyurularından, tanıtım cümlelerinden SORU ÜRETME.
+1. SADECE transkriptte fiilen işlenen konulardan soru üret.
 2. ${difficultyInstruction}
-3. Tam olarak ${quizCount} adet soru üret — ne eksik ne fazla.
-4. Her soru gerçek sınav sorusu gibi olsun — öğrencinin konuyu gerçekten öğrenip öğrenmediğini ölçsün.
+3. Tam olarak ${safeQuizCount} adet soru üret — ne eksik ne fazla.
+4. Her soru gerçek sınav sorusu gibi olsun.
 5. Şıklar her zaman 4 tane olsun (A, B, C, D).
-6. Doğru cevap her soru için farklı şık pozisyonlarında olsun (hep A veya hep B olmasın).
+6. Doğru cevap her soru için farklı şık pozisyonlarında olsun.
 7. Timestamp olarak o konunun işlendiği videonun gerçek dakikasını yaz.
+8. Her soruya kısa bir açıklama ekle (explanation).
 
 SADECE şu JSON formatında yanıt ver. Başka hiçbir şey yazma, markdown kullanma, açıklama ekleme.
 Tüm string değerler tek satırda olmalı — newline karakteri içermemeli.
@@ -109,7 +119,7 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
     "conclusion": "Dersin genel sonucu ve öğrenciye tavsiyeler"
   },
   "criticalMoments": [
-    {"timestamp": "MM:SS", "title": "Konu başlığı", "reason": "Neden önemli, sınavda çıkabilir mi"}
+    {"timestamp": "MM:SS", "title": "Konu başlığı", "reason": "Neden önemli veya hangi konu başlıyor"}
   ],
   "difficulty": "orta",
   "questions": [
@@ -156,9 +166,8 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
       });
     }
 
-    // Soru sayısını garanti et
-    if (parsed.questions && parsed.questions.length > quizCount) {
-      parsed.questions = parsed.questions.slice(0, quizCount);
+    if (parsed.questions && parsed.questions.length > safeQuizCount) {
+      parsed.questions = parsed.questions.slice(0, safeQuizCount);
     }
 
     return parsed;
