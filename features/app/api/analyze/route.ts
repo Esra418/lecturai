@@ -1,39 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { runGeminiAnalysis } from "@/lib/analysis";
-import {
-  getTranscriptCues,
-  TranscriptFetchError,
-  truncateCuesForModel,
-  type TranscriptCue,
-} from "@/lib/transcript";
+import { runGeminiAnalysis } from "@/lib/gemini/analysis";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 
 const bodySchema = z.object({
   url: z.string().min(1),
-  quizCount: z.number().optional().default(5), // Bunu ekledik
-  customInstructions: z.string().optional(),   // Bunu ekledik
+  quizCount: z.number().optional().default(5),
+  customInstructions: z.string().optional(),
 });
-
-; // user-flow.md
-
-function formatTranscriptForClient(cues: TranscriptCue[], maxLines = 200) {
-  const slice = cues.length > maxLines ? cues.slice(0, maxLines) : cues;
-  return {
-    lines: slice.map((c) => {
-      const m = Math.floor(c.startSeconds / 60);
-      const s = Math.floor(c.startSeconds % 60);
-      return {
-        timestamp: `${m}:${s.toString().padStart(2, "0")}`,
-        startSeconds: c.startSeconds,
-        text: c.text,
-      };
-    }),
-    truncated: cues.length > maxLines,
-    totalCues: cues.length,
-  };
-}
 
 export async function POST(request: Request) {
   let json: unknown;
@@ -48,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Gerekli alanlar eksik veya hatalı." }, { status: 400 });
   }
 
-  const { url, quizCount, customInstructions } = parsed.data;
+  const { url } = parsed.data;
   const videoId = extractYouTubeVideoId(url);
   if (!videoId) {
     return NextResponse.json(
@@ -57,43 +32,28 @@ export async function POST(request: Request) {
     );
   }
 
-  let cues: TranscriptCue[];
-  try {
-    cues = await getTranscriptCues(videoId);
-  } catch (err) {
-    if (err instanceof TranscriptFetchError) {
-      const status = err.code === "TRANSCRIPT_RATE" ? 429 : 422;
-      return NextResponse.json({ error: err.message, code: err.code }, { status });
-    }
-    throw err;
-  }
-
-
-  const { text: transcriptBlock, truncated: transcriptTruncated } = truncateCuesForModel(cues);
+  // Temiz URL oluştur (playlist parametrelerini at)
+  const cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
   let analysis;
   try {
-    analysis = await runGeminiAnalysis(transcriptBlock);
+    analysis = await runGeminiAnalysis(cleanUrl);
   } catch (err) {
     console.error("[analyze]", err);
-    return NextResponse.json({ error: "Bir sorun oluştu, tekrar deneyin." }, { status: 502 });
+    return NextResponse.json(
+      { error: "Video analiz edilemedi. Video herkese açık olmalı ve içerik politikasına uygun olmalı." },
+      { status: 502 }
+    );
   }
-
-  const fullTranscriptText = cues
-    .map((c) => {
-      const m = Math.floor(c.startSeconds / 60);
-      const s = Math.floor(c.startSeconds % 60);
-      return `${m}:${s.toString().padStart(2, "0")} ${c.text}`;
-    })
-    .join("\n");
 
   return NextResponse.json({
     videoId,
     analysis,
-    transcript: formatTranscriptForClient(cues, 9999),
-    fullTranscript: fullTranscriptText,
+    transcript: { lines: [], truncated: false, totalCues: 0 },
+    fullTranscript: "",
     meta: {
-      transcriptTruncatedForModel: transcriptTruncated,
+      transcriptTruncatedForModel: false,
+      source: "gemini-video",
     },
   });
 }
