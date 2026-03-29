@@ -1,3 +1,5 @@
+import { Innertube } from "youtubei.js";
+
 export type TranscriptCue = { startSeconds: number; text: string };
 
 export class TranscriptFetchError extends Error {
@@ -36,179 +38,66 @@ export function truncateCuesForModel(cues: TranscriptCue[]): { text: string; tru
   return { text: acc.trimEnd(), truncated: true };
 }
 
-const FETCH_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-};
-
-interface CaptionTrack {
-  baseUrl: string;
-  languageCode: string;
-  kind?: string;
-}
-
-async function getCaptionTracks(videoId: string): Promise<CaptionTrack[]> {
-  const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: FETCH_HEADERS,
-  });
-
-  if (!res.ok) {
-    throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video sayfasına erişilemedi.");
-  }
-
-  const html = await res.text();
-
-  // /s flag kullanmadan çok satırlı match — indexOf ile yapalım
-  const marker = "ytInitialPlayerResponse = ";
-  const startIdx = html.indexOf(marker);
-  if (startIdx === -1) {
-    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi bulunamadı.");
-  }
-
-  // JSON'un başlangıcını bul
-  const jsonStart = startIdx + marker.length;
-  
-  // Derinlik sayacıyla JSON sonunu bul
-  let depth = 0;
-  let jsonEnd = -1;
-  for (let i = jsonStart; i < html.length; i++) {
-    if (html[i] === "{") depth++;
-    else if (html[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        jsonEnd = i + 1;
-        break;
-      }
-    }
-  }
-
-  if (jsonEnd === -1) {
-    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi ayrıştırılamadı.");
-  }
-
-  let playerData: any;
-  try {
-    playerData = JSON.parse(html.slice(jsonStart, jsonEnd));
-  } catch {
-    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi JSON parse edilemedi.");
-  }
-
-  const tracks: CaptionTrack[] =
-    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-
-  return tracks;
-}
-
-async function fetchCuesFromUrl(baseUrl: string): Promise<TranscriptCue[]> {
-  const url = baseUrl.includes("fmt=") ? baseUrl : `${baseUrl}&fmt=json3`;
-
-  const res = await fetch(url, { headers: FETCH_HEADERS });
-  if (!res.ok) throw new Error("Caption fetch failed: " + res.status);
-
-  try {
-    const data = await res.json();
-    const cues = parseJson3(data);
-    if (cues.length > 0) return cues;
-  } catch {
-    // json3 başarısız, xml dene
-  }
-
-  const xmlUrl = baseUrl.replace(/&fmt=[^&]*/g, "") + "&fmt=xml";
-  const xmlRes = await fetch(xmlUrl, { headers: FETCH_HEADERS });
-  if (!xmlRes.ok) throw new Error("XML caption fetch failed");
-  const xml = await xmlRes.text();
-  return parseXml(xml);
-}
-
-function parseJson3(data: any): TranscriptCue[] {
-  const events = data?.events ?? [];
-  const cues: TranscriptCue[] = [];
-  for (const event of events) {
-    if (!event.segs) continue;
-    const startSeconds = (event.tStartMs ?? 0) / 1000;
-    const text = event.segs
-      .map((s: any) => s.utf8 ?? "")
-      .join("")
-      .replace(/[\n\r]+/g, " ")
-      .trim();
-    if (text && text !== "\n") {
-      cues.push({ startSeconds, text });
-    }
-  }
-  return cues;
-}
-
-function parseXml(xml: string): TranscriptCue[] {
-  const cues: TranscriptCue[] = [];
-  const regex = /<text start="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
-  let match;
-  while ((match = regex.exec(xml)) !== null) {
-    const startSeconds = parseFloat(match[1]);
-    const text = match[2]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (text) cues.push({ startSeconds, text });
-  }
-  return cues;
-}
-
-function pickBestTrack(tracks: CaptionTrack[]): CaptionTrack | null {
-  if (tracks.length === 0) return null;
-  const priority = ["tr", "en"];
-  for (const lang of priority) {
-    const manual = tracks.find((t) => t.languageCode === lang && t.kind !== "asr");
-    if (manual) return manual;
-  }
-  for (const lang of priority) {
-    const asr = tracks.find((t) => t.languageCode === lang);
-    if (asr) return asr;
-  }
-  return tracks[0];
-}
-
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
-  let tracks: CaptionTrack[];
+  let yt: Awaited<ReturnType<typeof Innertube.create>>;
   try {
-    tracks = await getCaptionTracks(videoId);
-  } catch (err) {
-    if (err instanceof TranscriptFetchError) throw err;
-    throw new TranscriptFetchError(
-      "VIDEO_UNAVAILABLE",
-      "Video sayfasına erişilemedi. Video herkese açık olmalı."
-    );
+    yt = await Innertube.create({
+      retrieve_player: false,
+      generate_session_locally: true,
+    });
+  } catch {
+    throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "YouTube bağlantısı kurulamadı.");
   }
 
-  if (tracks.length === 0) {
+  let info: any;
+  try {
+    info = await yt.getInfo(videoId);
+  } catch {
+    throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video bilgisi alınamadı. Video herkese açık olmalı.");
+  }
+
+  // Transkript al
+  let transcriptData: any;
+  try {
+    transcriptData = await info.getTranscript();
+  } catch {
     throw new TranscriptFetchError(
       "TRANSCRIPT_MISSING",
       "Bu videoda altyazı bulunamadı. Lütfen altyazısı olan bir video deneyin."
     );
   }
 
-  const track = pickBestTrack(tracks);
-  if (!track) {
-    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Uygun altyazı bulunamadı.");
-  }
-
-  let cues: TranscriptCue[];
-  try {
-    cues = await fetchCuesFromUrl(track.baseUrl);
-  } catch {
+  if (!transcriptData) {
     throw new TranscriptFetchError(
-      "TRANSCRIPT_UNKNOWN",
-      "Altyazı verisi alınırken hata oluştu. Tekrar deneyin."
+      "TRANSCRIPT_MISSING",
+      "Bu videoda altyazı bulunamadı. Lütfen altyazısı olan bir video deneyin."
     );
   }
 
-  if (cues.length === 0) {
+  // Segmentleri çıkar
+  const segments =
+    transcriptData?.transcript?.content?.body?.initial_segments ??
+    transcriptData?.content?.body?.initial_segments ??
+    [];
+
+  if (!segments || segments.length === 0) {
     throw new TranscriptFetchError("TRANSCRIPT_EMPTY", "Altyazı boş döndü.");
+  }
+
+  const cues: TranscriptCue[] = segments
+    .filter((seg: any) => seg?.snippet?.text)
+    .map((seg: any) => {
+      const startMs = seg.start_ms ?? seg.startMs ?? 0;
+      const startSeconds = Number(startMs) / 1000;
+      const text = (seg.snippet?.text ?? "")
+        .replace(/[\n\r]+/g, " ")
+        .trim();
+      return { startSeconds, text };
+    })
+    .filter((c: TranscriptCue) => c.text.length > 0);
+
+  if (cues.length === 0) {
+    throw new TranscriptFetchError("TRANSCRIPT_EMPTY", "Altyazı içeriği boş.");
   }
 
   return cues;
