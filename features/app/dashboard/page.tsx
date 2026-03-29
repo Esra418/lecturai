@@ -27,7 +27,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const profile = getProfile();
     if (!profile) {
-      router.push("/onboarding");
+      router.replace("/onboarding");
       return;
     }
     setName(profile.name);
@@ -59,7 +59,7 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <button onClick={() => router.push("/")} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1">
+            <button onClick={() => router.replace("/")} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1">
               ← Ana Sayfa
             </button>
             <h1 className="text-3xl font-bold text-white">Merhaba, {name} 👋</h1>
