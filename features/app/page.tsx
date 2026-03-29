@@ -505,6 +505,16 @@ function QuizSection({
               Maksimum tekrar hakkına ulaştın. Bu konuları videoda tekrar izlemeyi dene.
             </p>
           )}
+          <button
+  onClick={() => {
+    const text = `🎓 Lecturai ile çalıştım!\n🎯 Sonuç: ${score}/${activeQuestions.length} doğru (%${Math.round((score/activeQuestions.length)*100)})\n${wrongQuestions.length > 0 ? `⚠️ Tekrar edilecek: ${wrongQuestions.slice(0,2).map(q => q.question.slice(0,30)).join(", ")}` : "✅ Tüm soruları doğru bildim!"}\n🔗 lecturai-jade.vercel.app`;
+    navigator.clipboard.writeText(text);
+    alert("Kopyalandı! WhatsApp veya Discord'a yapıştır 🚀");
+  }}
+  className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-5 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20"
+>
+  📤 Sonucu Paylaş
+</button>
         </div>
       </div>
     );
