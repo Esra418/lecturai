@@ -60,7 +60,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <button onClick={() => router.replace("/")} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1">
-              ← Ana Sayfa
+              ← Geri
             </button>
             <h1 className="text-3xl font-bold text-white">Merhaba, {name} 👋</h1>
             <p className="text-zinc-400 text-sm mt-1">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
             {videos.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
                 <p className="text-zinc-500 text-sm">Henüz video analiz etmedin.</p>
-                <button onClick={() => router.push("/")} className="mt-3 text-xs text-indigo-400 hover:text-indigo-300">
+                <button onClick={() => router.back()} className="mt-3 text-xs text-indigo-400 hover:text-indigo-300">
                   İlk videoyu analiz et →
                 </button>
               </div>
