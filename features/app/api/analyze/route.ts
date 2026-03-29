@@ -67,6 +67,7 @@ export async function POST(request: Request) {
   }
 
   const { text: transcriptBlock, truncated: transcriptTruncated } = truncateCuesForModel(cues);
+  console.log("[DEBUG] transcriptBlock.length:", transcriptBlock.length, "cues:", cues.length);
 
   let analysis;
   try {
