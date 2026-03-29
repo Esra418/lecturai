@@ -45,10 +45,9 @@ const FETCH_HEADERS = {
 interface CaptionTrack {
   baseUrl: string;
   languageCode: string;
-  kind?: string; // "asr" = otomatik
+  kind?: string;
 }
 
-/** YouTube video sayfasından captionTracks listesini çeker */
 async function getCaptionTracks(videoId: string): Promise<CaptionTrack[]> {
   const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: FETCH_HEADERS,
@@ -60,17 +59,39 @@ async function getCaptionTracks(videoId: string): Promise<CaptionTrack[]> {
 
   const html = await res.text();
 
-  // ytInitialPlayerResponse içindeki captionTracks'i bul
-  const playerMatch = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\})\s*;/s);
-  if (!playerMatch) {
+  // /s flag kullanmadan çok satırlı match — indexOf ile yapalım
+  const marker = "ytInitialPlayerResponse = ";
+  const startIdx = html.indexOf(marker);
+  if (startIdx === -1) {
     throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi bulunamadı.");
+  }
+
+  // JSON'un başlangıcını bul
+  const jsonStart = startIdx + marker.length;
+  
+  // Derinlik sayacıyla JSON sonunu bul
+  let depth = 0;
+  let jsonEnd = -1;
+  for (let i = jsonStart; i < html.length; i++) {
+    if (html[i] === "{") depth++;
+    else if (html[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (jsonEnd === -1) {
+    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi ayrıştırılamadı.");
   }
 
   let playerData: any;
   try {
-    playerData = JSON.parse(playerMatch[1]);
+    playerData = JSON.parse(html.slice(jsonStart, jsonEnd));
   } catch {
-    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi ayrıştırılamadı.");
+    throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Video verisi JSON parse edilemedi.");
   }
 
   const tracks: CaptionTrack[] =
@@ -79,28 +100,20 @@ async function getCaptionTracks(videoId: string): Promise<CaptionTrack[]> {
   return tracks;
 }
 
-/** Bir caption URL'sinden cue listesi çeker (XML formatı) */
 async function fetchCuesFromUrl(baseUrl: string): Promise<TranscriptCue[]> {
-  // json3 formatını tercih et, olmazsa xml'e dön
-  const url = baseUrl.includes("fmt=")
-    ? baseUrl
-    : `${baseUrl}&fmt=json3`;
+  const url = baseUrl.includes("fmt=") ? baseUrl : `${baseUrl}&fmt=json3`;
 
   const res = await fetch(url, { headers: FETCH_HEADERS });
   if (!res.ok) throw new Error("Caption fetch failed: " + res.status);
 
-  const contentType = res.headers.get("content-type") ?? "";
-
-  if (contentType.includes("json") || url.includes("fmt=json3")) {
-    try {
-      const data = await res.json();
-      return parseJson3(data);
-    } catch {
-      // json3 başarısız olursa xml dene
-    }
+  try {
+    const data = await res.json();
+    const cues = parseJson3(data);
+    if (cues.length > 0) return cues;
+  } catch {
+    // json3 başarısız, xml dene
   }
 
-  // XML fallback
   const xmlUrl = baseUrl.replace(/&fmt=[^&]*/g, "") + "&fmt=xml";
   const xmlRes = await fetch(xmlUrl, { headers: FETCH_HEADERS });
   if (!xmlRes.ok) throw new Error("XML caption fetch failed");
@@ -146,25 +159,17 @@ function parseXml(xml: string): TranscriptCue[] {
   return cues;
 }
 
-/** Dil öncelik sırasına göre en uygun track'i seçer */
 function pickBestTrack(tracks: CaptionTrack[]): CaptionTrack | null {
   if (tracks.length === 0) return null;
-
   const priority = ["tr", "en"];
-
-  // Önce manuel (non-asr) Türkçe/İngilizce
   for (const lang of priority) {
     const manual = tracks.find((t) => t.languageCode === lang && t.kind !== "asr");
     if (manual) return manual;
   }
-
-  // Sonra otomatik Türkçe/İngilizce
   for (const lang of priority) {
     const asr = tracks.find((t) => t.languageCode === lang);
     if (asr) return asr;
   }
-
-  // Son çare: ilk track
   return tracks[0];
 }
 
