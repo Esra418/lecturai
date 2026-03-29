@@ -264,7 +264,7 @@ function QuizSetup({
   const [inputValue, setInputValue] = useState("10");
   const [difficulty, setDifficulty] = useState<"kolay" | "orta" | "zor" | "karisik">("karisik");
 
-  const MAX = 50;
+  const MAX = 20;
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     setInputValue(e.target.value);
