@@ -9,21 +9,14 @@ const ai = new GoogleGenAI({ apiKey });
 
 /** Gemini'den gelen ham metni JSON objesine dönüştürür. */
 function extractJSON(raw: string): any {
-  // 1) Markdown code block varsa temizle
   let text = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
-
-  // 2) İlk { ile başla
   const start = text.indexOf("{");
   if (start > 0) text = text.slice(start);
-
-  // 3) Kontrol karakterlerini temizle (\n \t hariç)
   text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
 
-  // 4) Direkt parse dene
   try {
     return JSON.parse(text);
   } catch {
-    // 5) Depth sayacıyla son geçerli } bul
     let depth = 0;
     let lastClose = -1;
     for (let i = 0; i < text.length; i++) {
@@ -38,7 +31,6 @@ function extractJSON(raw: string): any {
       try {
         return JSON.parse(sliced);
       } catch {
-        // 6) Bozuk string'leri düzelt: kapatılmamış " içindeki newline'ları escape et
         const fixed = sliced
           .replace(/:\s*"((?:[^"\\]|\\.)*)(?=[,\}\]])/g, (_m, p1) =>
             ': "' + p1.replace(/\n/g, "\\n").replace(/\r/g, "") + '"'
@@ -98,7 +90,7 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         temperature: 0.2,
