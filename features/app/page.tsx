@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { isYoutubeUrl } from "@/lib/youtube";
-
+import { getProfile, saveVideoRecord, updateStreak } from "@/lib/storage";
 type Question = {
   question: string;
   options: string[];
@@ -656,6 +657,18 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [activeTab, setActiveTab] = useState<"notlar" | "kritik" | "sinav" | "sohbet">("notlar");
+  const router = useRouter();
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const profile = getProfile();
+    if (!profile) {
+      router.push("/onboarding");
+    } else {
+      setUserName(profile.name);
+      updateStreak();
+    }
+  }, [router]);
 
   const isValidYoutubeUrl = useMemo(() => isYoutubeUrl(videoUrl), [videoUrl]);
 
@@ -700,6 +713,16 @@ export default function Home() {
           <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:p-10">
 
             <span className="mb-5 inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-zinc-300">AI Study Companion</span>
+            {/* Dashboard linki */}
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition"
+              >
+                {userName && <span className="text-indigo-400">👋 {userName}</span>}
+                <span>📊 Dashboard</span>
+              </button>
+            </div>
             <h1 className="text-balance text-4xl font-semibold tracking-tight text-white sm:text-6xl">Lecturai</h1>
             <p className="mt-4 max-w-2xl text-pretty text-base leading-7 text-zinc-300 sm:text-lg">
               YouTube ders videolarındaki kritik dakikaları saniyeler içinde bul, o ana atla ve sınava odaklan.
