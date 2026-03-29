@@ -32,27 +32,73 @@ export function cuesToAnalystText(cues: TranscriptCue[]): string {
 
 const MAX_TRANSCRIPT_CHARS = 120_000;
 
+// Deneyeceğimiz dil sırası:
+// tr   → manuel Türkçe altyazı
+// a.tr → YouTube otomatik Türkçe
+// en   → manuel İngilizce
+// a.en → YouTube otomatik İngilizce
+const LANGUAGE_FALLBACK_CHAINS = [
+  ["tr", "a.tr", "en", "a.en"],
+  ["a.tr", "tr", "a.en", "en"],
+  ["en", "a.en"],
+];
+
+async function tryFetchWithLanguages(
+  videoId: string,
+  languages: string[]
+): Promise<TranscriptResponse[]> {
+  // Önce hepsini birden dene (kütüphane ilk bulduğunu alır)
+  try {
+    return await (fetchTranscript as any)(videoId, { languages });
+  } catch {
+    // Tek tek dene
+    for (const lang of languages) {
+      try {
+        return await (fetchTranscript as any)(videoId, { languages: [lang] });
+      } catch {
+        continue;
+      }
+    }
+    throw new Error("Hiçbir dilde transkript bulunamadı.");
+  }
+}
+
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
   let raw: TranscriptResponse[];
   try {
-   raw = await (fetchTranscript as any)(videoId, { languages: ["tr", "en"] });
+    raw = await tryFetchWithLanguages(videoId, ["tr", "a.tr", "en", "a.en"]);
   } catch (err) {
     if (err instanceof YoutubeTranscriptVideoUnavailableError) {
       throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video erişilemiyor veya kaldırılmış olabilir.");
     }
     if (err instanceof YoutubeTranscriptDisabledError) {
-      throw new TranscriptFetchError("TRANSCRIPT_DISABLED", "Bu videoda altyazı/transkript kapalı.");
+      throw new TranscriptFetchError(
+        "TRANSCRIPT_DISABLED",
+        "Bu videoda altyazı/transkript kapalı. Lütfen altyazısı açık bir video deneyin."
+      );
     }
     if (err instanceof YoutubeTranscriptNotAvailableError) {
-      throw new TranscriptFetchError("TRANSCRIPT_MISSING", "Bu video için transkript bulunamadı.");
+      throw new TranscriptFetchError(
+        "TRANSCRIPT_MISSING",
+        "Bu video için transkript bulunamadı. Video sahibi altyazı eklememiş olabilir."
+      );
     }
     if (err instanceof YoutubeTranscriptNotAvailableLanguageError) {
-      throw new TranscriptFetchError("TRANSCRIPT_LANG", "İstenen dilde transkript yok; başka bir video deneyin.");
+      throw new TranscriptFetchError(
+        "TRANSCRIPT_LANG",
+        "Bu videoda Türkçe veya İngilizce altyazı yok. Başka bir video deneyin."
+      );
     }
     if (err instanceof YoutubeTranscriptTooManyRequestError) {
-      throw new TranscriptFetchError("TRANSCRIPT_RATE", "YouTube istek sınırı — biraz sonra tekrar deneyin.");
+      throw new TranscriptFetchError(
+        "TRANSCRIPT_RATE",
+        "YouTube istek sınırına ulaşıldı. Birkaç dakika bekleyip tekrar deneyin."
+      );
     }
-    throw new TranscriptFetchError("TRANSCRIPT_UNKNOWN", "Transkript alınırken bir hata oluştu.");
+    throw new TranscriptFetchError(
+      "TRANSCRIPT_UNKNOWN",
+      "Transkript alınırken bir hata oluştu. Video herkese açık ve altyazılı olmalı."
+    );
   }
 
   const cues: TranscriptCue[] = raw
@@ -64,7 +110,10 @@ export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[
     .filter((c) => c.text.length > 0);
 
   if (cues.length === 0) {
-    throw new TranscriptFetchError("TRANSCRIPT_EMPTY", "Transkript boş döndü.");
+    throw new TranscriptFetchError(
+      "TRANSCRIPT_EMPTY",
+      "Transkript boş döndü. Video konuşma içermiyor olabilir."
+    );
   }
 
   return cues;
