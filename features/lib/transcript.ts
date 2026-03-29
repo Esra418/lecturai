@@ -20,7 +20,7 @@ export function cuesToAnalystText(cues: TranscriptCue[]): string {
     .join("\n");
 }
 
-const MAX_TRANSCRIPT_CHARS = 5_000;
+const MAX_TRANSCRIPT_CHARS = 80_000;
 
 export function truncateCuesForModel(cues: TranscriptCue[]): { text: string; truncated: boolean } {
   const full = cuesToAnalystText(cues);
