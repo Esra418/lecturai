@@ -252,7 +252,7 @@ function StudyNotesSection({ notes, summary, videoId }: { notes?: StudyNotes; su
   );
 }
 
-// ── Quiz Setup ───────────────────────────────────────────────────────────────
+
 // ── Quiz Setup ───────────────────────────────────────────────────────────────
 function QuizSetup({
   onStart,
@@ -371,8 +371,6 @@ function QuizSetup({
     </div>
   );
 }
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
 function QuizSection({
   questions,
   videoId,
@@ -573,111 +571,6 @@ function QuizSection({
               {current + 1 >= activeQuestions.length ? "Sonucu Gör" : "Sonraki Soru →"}
             </button>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Quiz ─────────────────────────────────────────────────────────────────────
-function QuizSection({ questions, videoId }: { questions: Question[]; videoId: string }) {
-  const [phase, setPhase] = useState<"setup" | "quiz" | "finished">("setup");
-  const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [score, setScore] = useState(0);
-
-  function handleStart(count: number) {
-    const shuffled = [...questions].sort(() => Math.random() - 0.5).slice(0, count);
-    setActiveQuestions(shuffled);
-    setCurrent(0);
-    setSelected(null);
-    setScore(0);
-    setPhase("quiz");
-  }
-
-  if (phase === "setup") {
-    return <QuizSetup maxQuestions={questions.length} onStart={handleStart} />;
-  }
-
-  if (phase === "finished") {
-    const pct = Math.round((score / activeQuestions.length) * 100);
-    return (
-      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-center">
-        <div className="text-5xl mb-4">{pct === 100 ? "🏆" : pct >= 60 ? "💪" : "📚"}</div>
-        <h3 className="text-2xl font-bold text-white">Sınav Bitti!</h3>
-        <p className="mt-3 text-5xl font-semibold text-indigo-300">{score} / {activeQuestions.length}</p>
-        <div className="mt-5 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-4 text-left flex gap-3">
-          <span className="text-xl">🎓</span>
-          <p className="text-sm text-zinc-300">
-            {pct === 100
-              ? "Mükemmel! Tüm soruları doğru bildin. Bu videoyu tam anlamışsın!"
-              : pct >= 60
-              ? "İyi iş! Yanlış cevapladığın konuları videoda tekrar et."
-              : "Henüz hazır değilsin. Kritik dakikaları bir daha izle ve tekrar dene."}
-          </p>
-        </div>
-        <div className="mt-5 flex gap-3 justify-center">
-          <button onClick={() => setPhase("setup")}
-            className="rounded-xl border border-white/15 bg-white/5 px-6 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/10">
-            Ayarları Değiştir
-          </button>
-          <button onClick={() => handleStart(activeQuestions.length)}
-            className="rounded-xl bg-indigo-500 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-400">
-            Tekrar Çöz
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const q = activeQuestions[current];
-
-  return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6">
-      <div className="mb-5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-        <div className="h-full rounded-full bg-indigo-500 transition-all duration-500"
-          style={{ width: `${(current / activeQuestions.length) * 100}%` }} />
-      </div>
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-xs text-zinc-400">Soru {current + 1} / {activeQuestions.length}</span>
-        <span className="text-xs text-indigo-300">Skor: {score}</span>
-      </div>
-      <p className="text-base font-medium text-white">{q.question}</p>
-      <ul className="mt-4 space-y-2">
-        {q.options.map((opt, idx) => {
-          let cls = "w-full rounded-xl border px-4 py-3 text-left text-sm transition ";
-          if (selected === null) cls += "border-white/15 bg-white/5 text-zinc-200 hover:bg-white/10";
-          else if (idx === q.correct) cls += "border-emerald-400/60 bg-emerald-500/15 text-emerald-200";
-          else if (idx === selected) cls += "border-rose-400/60 bg-rose-500/15 text-rose-200";
-          else cls += "border-white/10 bg-white/5 text-zinc-500";
-          return (
-            <li key={idx}>
-              <button className={cls} onClick={() => {
-                if (selected !== null) return;
-                setSelected(idx);
-                if (idx === q.correct) setScore((s) => s + 1);
-              }}>{opt}</button>
-            </li>
-          );
-        })}
-      </ul>
-      {selected !== null && (
-        <div className="mt-4 flex items-center gap-3">
-          {selected !== q.correct && (
-            <a href={youtubeDeepLink(videoId, q.timestamp)} target="_blank" rel="noreferrer"
-              className="rounded-xl border border-indigo-400/40 bg-indigo-500/10 px-4 py-2 text-sm text-indigo-300 hover:bg-indigo-500/20">
-              Bu konuya git →
-            </a>
-          )}
-          <button
-            onClick={() => {
-              if (current + 1 >= activeQuestions.length) setPhase("finished");
-              else { setCurrent((c) => c + 1); setSelected(null); }
-            }}
-            className="ml-auto rounded-xl bg-indigo-500 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-400">
-            {current + 1 >= activeQuestions.length ? "Sonucu Gör" : "Sonraki Soru →"}
-          </button>
         </div>
       )}
     </div>
@@ -890,7 +783,7 @@ export default function Home() {
                 )}
                 {activeTab === "sinav" && (
                   result.analysis.questions?.length > 0
-                    ? <QuizSection questions={result.analysis.questions} videoId={result.videoId} />
+                    ? <QuizSection questions={result.analysis.questions} videoId={result.videoId} transcriptText={result.fullTranscript || ""} />
                     : <p className="text-sm text-zinc-400">Soru üretilemedi, videoyu tekrar analiz et.</p>
                 )}
                 {activeTab === "sohbet" && (
