@@ -7,7 +7,6 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-/** Gemini'den gelen ham metni JSON objesine dönüştürür. */
 function extractJSON(raw: string): any {
   let text = raw.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
   const start = text.indexOf("{");
@@ -46,13 +45,47 @@ function extractJSON(raw: string): any {
   }
 }
 
-export async function runGeminiAnalysis(transcriptFormatted: string) {
+export async function runGeminiAnalysis(
+  transcriptFormatted: string,
+  quizCount: number = 10,
+  difficulty: "kolay" | "orta" | "zor" | "karisik" = "karisik"
+) {
+  const difficultyInstruction = {
+    kolay: `Sorular KOLAY seviyede olmalı. Temel tanım ve kavram soruları sor. 
+Örnek: "X nedir?", "Y'nin amacı nedir?" gibi doğrudan sorular.
+Şıklar arasındaki fark belirgin olsun, yanıltıcı şık kullanma.`,
+
+    orta: `Sorular ORTA seviyede olmalı. Anlama ve uygulama soruları sor.
+Örnek: "X durumunda ne yapılır?", "Y ile Z arasındaki fark nedir?" gibi sorular.
+Şıklar birbiriyle karıştırılabilir olsun ama mantık yürütünce doğru bulunabilsin.`,
+
+    zor: `Sorular ZOR seviyede olmalı. Analiz, sentez ve değerlendirme soruları sor.
+Örnek: "X'in Y üzerindeki etkisi nedir?", "Hangi durumda Z tercih edilmez?" gibi sorular.
+Şıklar birbirine çok yakın olsun, derin anlama gereksin.
+Yanıltıcı ama mantıklı yanlış şıklar ekle.`,
+
+    karisik: `Sorular KARIŞIK zorlukta olmalı:
+- İlk %30'u kolay (temel kavramlar)
+- Orta %40'ı orta (anlama ve uygulama)  
+- Son %30'u zor (analiz ve değerlendirme)
+Her zorluk seviyesinden farklı soru tipleri kullan.`,
+  }[difficulty];
+
   try {
     const prompt = `Sen deneyimli bir üniversite hocasısın. Aşağıda bir YouTube ders videosunun zaman damgalı transkripti var.
 Öğrencinin elinde kaliteli bir ders notu olması için aşağıdaki görevi eksiksiz yap.
 
 Transkript:
 ${transcriptFormatted}
+
+SORU ÜRETİM KURALLARI — ÇOK ÖNEMLİ:
+1. SADECE transkriptte geçen konulardan soru üret. Hocanın "gelecek derste şunu işleyeceğiz" gibi duyurularından, tanıtım cümlelerinden SORU ÜRETME.
+2. ${difficultyInstruction}
+3. Tam olarak ${quizCount} adet soru üret — ne eksik ne fazla.
+4. Her soru gerçek sınav sorusu gibi olsun — öğrencinin konuyu gerçekten öğrenip öğrenmediğini ölçsün.
+5. Şıklar her zaman 4 tane olsun (A, B, C, D).
+6. Doğru cevap her soru için farklı şık pozisyonlarında olsun (hep A veya hep B olmasın).
+7. Timestamp olarak o konunun işlendiği videonun gerçek dakikasını yaz.
 
 SADECE şu JSON formatında yanıt ver. Başka hiçbir şey yazma, markdown kullanma, açıklama ekleme.
 Tüm string değerler tek satırda olmalı — newline karakteri içermemeli.
@@ -78,13 +111,14 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
   "criticalMoments": [
     {"timestamp": "MM:SS", "title": "Konu başlığı", "reason": "Neden önemli, sınavda çıkabilir mi"}
   ],
-  "difficulty": "kolay",
+  "difficulty": "orta",
   "questions": [
     {
       "question": "Soru metni",
       "options": ["A şıkkı", "B şıkkı", "C şıkkı", "D şıkkı"],
       "correct": 0,
-      "timestamp": "MM:SS"
+      "timestamp": "MM:SS",
+      "explanation": "Doğru cevabın kısa açıklaması"
     }
   ]
 }`;
@@ -93,7 +127,7 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        temperature: 0.2,
+        temperature: 0.3,
       },
     });
 
@@ -120,6 +154,11 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
             : parseInt(parts[0]);
         return { ...s, startSeconds: isNaN(seconds) ? 0 : seconds };
       });
+    }
+
+    // Soru sayısını garanti et
+    if (parsed.questions && parsed.questions.length > quizCount) {
+      parsed.questions = parsed.questions.slice(0, quizCount);
     }
 
     return parsed;
