@@ -36,6 +36,14 @@ export function truncateCuesForModel(cues: TranscriptCue[]): { text: string; tru
   return { text: acc.trimEnd(), truncated: true };
 }
 
+/**
+ * RapidAPI bazen milisaniye bazen saniye döndürür.
+ * İlk segmentin değerine bakarak otomatik tespit eder.
+ */
+function toSeconds(value: number, isMilli: boolean): number {
+  return isMilli ? value / 1000 : value;
+}
+
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) {
@@ -72,18 +80,26 @@ export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[
     throw new TranscriptFetchError("TRANSCRIPT_UNKNOWN", "Transkript verisi okunamadı.");
   }
 
-  // RapidAPI YouTube Transcript response formatı
   const segments: any[] = data?.transcript ?? data?.results ?? data ?? [];
 
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new TranscriptFetchError("TRANSCRIPT_EMPTY", "Altyazı boş döndü.");
   }
 
+  // İlk segment'in offset değerine bak:
+  // Eğer 1000'den büyükse milisaniye, küçükse saniye kabul et
+  const firstOffset = Number(segments[0]?.offset ?? segments[0]?.start ?? segments[0]?.startTime ?? 0);
+  // Video genelde 0'dan başlar, 2. segmente bak daha güvenli
+  const secondOffset = Number(segments[1]?.offset ?? segments[1]?.start ?? segments[1]?.startTime ?? 0);
+  const isMilli = secondOffset > 1000;
+
   const cues: TranscriptCue[] = segments
-    .map((seg: any) => ({
-      startSeconds: Number(seg.offset ?? seg.start ?? seg.startTime ?? 0) / 1000,
-      text: String(seg.text ?? seg.content ?? "").replace(/[\n\r]+/g, " ").trim(),
-    }))
+    .map((seg: any) => {
+      const raw = Number(seg.offset ?? seg.start ?? seg.startTime ?? 0);
+      const startSeconds = toSeconds(raw, isMilli);
+      const text = String(seg.text ?? seg.content ?? "").replace(/[\n\r]+/g, " ").trim();
+      return { startSeconds, text };
+    })
     .filter((c: TranscriptCue) => c.text.length > 0);
 
   if (cues.length === 0) {
