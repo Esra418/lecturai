@@ -303,7 +303,7 @@ function QuizSetup({
         <div>
           <p className="text-xs font-semibold text-indigo-400 mb-1">Koçun önerisi</p>
           <p className="text-sm text-zinc-300">
-            Kısa sınavlar için 10, kapsamlı çalışma için 20-30 soru öneririm. Max 50 soru seçebilirsin!
+            Kısa sınavlar için 10, kapsamlı çalışma için 15-20 soru öneririm. Max 20 soru seçebilirsin!
           </p>
         </div>
       </div>
@@ -338,7 +338,7 @@ function QuizSetup({
         </div>
         <div className="mt-1 flex justify-between text-xs text-zinc-500">
           <span>1</span>
-          <span>50</span>
+          <span>20</span>
         </div>
       </div>
 
