@@ -136,10 +136,9 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
    const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
-      config: {
-        temperature: 0.1,
-        maxOutputTokens: 8192,
-      },
+     config: {
+  temperature: 0.2,
+},
     });
     const text = response.text ?? "";
     const parsed = extractJSON(text);
