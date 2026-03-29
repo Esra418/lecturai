@@ -7,9 +7,8 @@ aradıkları konuyu içeriyor, ancak hangi dakika olduğunu bilmiyorlar.
 Zaman kaybı, motivasyon düşüşü ve verimsiz çalışma döngüsü.
 
 ## Kullanıcı
-Vize ve final sınavına hazırlanan üniversite öğrencileri (Z kuşağı).
-Bilgiyi hızlı tüketmek isteyen, telefon ve dizüstü bilgisayar kullanan,
-zamanı kısıtlı öğrenciler.
+Başta YKS (TYT/AYT) hazırlık öğrencileri ve üniversite öğrencileri.
+YouTube'dan ders izleyen, zamanı kısıtlı, akıllı çalışmak isteyen Z kuşağı.
 
 ## AI'ın Rolü
 1. YouTube linkindeki video transkriptini RapidAPI ile çeker.
