@@ -570,7 +570,7 @@ function QuizSection({
   setPhase("finished");
   saveQuizRecord({
     videoId: videoId,
-    score: idx === q.correct ? score + 1 : score,
+    score: score,
     total: activeQuestions.length,
     date: new Date().toISOString(),
     wrongTopics: wrongQuestions.map((wq) => wq.question.slice(0, 50)),
