@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isYoutubeUrl } from "@/lib/youtube";
-import { getProfile, saveVideoRecord, updateStreak } from "@/lib/storage";
+import { getProfile, saveVideoRecord, saveQuizRecord, updateStreak } from "@/lib/storage";
 type Question = {
   question: string;
   options: string[];
@@ -446,6 +446,15 @@ function QuizSection({
     const pct = Math.round((score / activeQuestions.length) * 100);
     const hasWrong = wrongQuestions.length > 0;
     const canRequiz = hasWrong && requizRound < 3;
+    useEffect(() => {
+      saveQuizRecord({
+        videoId: videoId,
+        score: score,
+        total: activeQuestions.length,
+        date: new Date().toISOString(),
+        wrongTopics: wrongQuestions.map((q) => q.question.slice(0, 50)),
+      });
+    }, []);
 
     return (
       <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-6 text-center">
@@ -693,6 +702,11 @@ useEffect(() => {
         return;
       }
       setResult(data as AnalysisResponse);
+      saveVideoRecord({
+        videoId: (data as AnalysisResponse).videoId,
+        title: (data as AnalysisResponse).analysis.studyNotes?.title || "Ders Notu",
+        analyzedAt: new Date().toISOString(),
+      });
     } catch {
       setError("Ağ hatası — bağlantınızı kontrol edin.");
     } finally {
