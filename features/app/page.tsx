@@ -311,7 +311,7 @@ function QuizSetup({
       {/* Soru sayısı */}
       <div className="mb-6">
         <label className="mb-3 block text-sm font-medium text-zinc-200">
-          Soru sayısı <span className="text-zinc-500 text-xs">(1-50)</span>
+         Soru sayısı <span className="text-zinc-500 text-xs">(1-20)</span>
         </label>
         <div className="flex items-center gap-3">
           <input
