@@ -660,7 +660,7 @@ export default function Home() {
   const router = useRouter();
   const [userName, setUserName] = useState<string | null>(null);
 
-  useEffect(() => {
+useEffect(() => {
     const profile = getProfile();
     if (!profile) {
       router.push("/onboarding");
@@ -668,6 +668,9 @@ export default function Home() {
       setUserName(profile.name);
       updateStreak();
     }
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") as "notlar" | "kritik" | "sinav" | "sohbet" | null;
+    if (tab) setActiveTab(tab);
   }, [router]);
 
   const isValidYoutubeUrl = useMemo(() => isYoutubeUrl(videoUrl), [videoUrl]);
