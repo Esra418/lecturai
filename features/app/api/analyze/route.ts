@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { runGeminiAnalysis } from "@/lib/gemini/analysis";
+import { runGeminiAnalysis } from "@/lib/analysis";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 
 const bodySchema = z.object({
