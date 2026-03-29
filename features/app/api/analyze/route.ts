@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { runGeminiAnalysis } from "@/lib/analysis";
+import {
+  getTranscriptCues,
+  TranscriptFetchError,
+  truncateCuesForModel,
+  type TranscriptCue,
+} from "@/lib/transcript";
 import { extractYouTubeVideoId } from "@/lib/youtube";
 
 const bodySchema = z.object({
@@ -9,6 +15,23 @@ const bodySchema = z.object({
   quizCount: z.number().optional().default(5),
   customInstructions: z.string().optional(),
 });
+
+function formatTranscriptForClient(cues: TranscriptCue[], maxLines = 9999) {
+  const slice = cues.length > maxLines ? cues.slice(0, maxLines) : cues;
+  return {
+    lines: slice.map((c) => {
+      const m = Math.floor(c.startSeconds / 60);
+      const s = Math.floor(c.startSeconds % 60);
+      return {
+        timestamp: `${m}:${s.toString().padStart(2, "0")}`,
+        startSeconds: c.startSeconds,
+        text: c.text,
+      };
+    }),
+    truncated: cues.length > maxLines,
+    totalCues: cues.length,
+  };
+}
 
 export async function POST(request: Request) {
   let json: unknown;
@@ -32,28 +55,42 @@ export async function POST(request: Request) {
     );
   }
 
-  // Temiz URL oluştur (playlist parametrelerini at)
-  const cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  let cues: TranscriptCue[];
+  try {
+    cues = await getTranscriptCues(videoId);
+  } catch (err) {
+    if (err instanceof TranscriptFetchError) {
+      const status = err.code === "TRANSCRIPT_RATE" ? 429 : 422;
+      return NextResponse.json({ error: err.message, code: err.code }, { status });
+    }
+    throw err;
+  }
+
+  const { text: transcriptBlock, truncated: transcriptTruncated } = truncateCuesForModel(cues);
 
   let analysis;
   try {
-    analysis = await runGeminiAnalysis(cleanUrl);
+    analysis = await runGeminiAnalysis(transcriptBlock);
   } catch (err) {
     console.error("[analyze]", err);
-    return NextResponse.json(
-      { error: "Video analiz edilemedi. Video herkese açık olmalı ve içerik politikasına uygun olmalı." },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: "Bir sorun oluştu, tekrar deneyin." }, { status: 502 });
   }
+
+  const fullTranscriptText = cues
+    .map((c) => {
+      const m = Math.floor(c.startSeconds / 60);
+      const s = Math.floor(c.startSeconds % 60);
+      return `${m}:${s.toString().padStart(2, "0")} ${c.text}`;
+    })
+    .join("\n");
 
   return NextResponse.json({
     videoId,
     analysis,
-    transcript: { lines: [], truncated: false, totalCues: 0 },
-    fullTranscript: "",
+    transcript: formatTranscriptForClient(cues),
+    fullTranscript: fullTranscriptText,
     meta: {
-      transcriptTruncatedForModel: false,
-      source: "gemini-video",
+      transcriptTruncatedForModel: transcriptTruncated,
     },
   });
 }
