@@ -35,7 +35,7 @@ const MAX_TRANSCRIPT_CHARS = 120_000;
 export async function getTranscriptCues(videoId: string): Promise<TranscriptCue[]> {
   let raw: TranscriptResponse[];
   try {
-    raw = await fetchTranscript(videoId, { languages: ["tr", "en"] });
+   raw = await (fetchTranscript as any)(videoId, { languages: ["tr", "en"] });
   } catch (err) {
     if (err instanceof YoutubeTranscriptVideoUnavailableError) {
       throw new TranscriptFetchError("VIDEO_UNAVAILABLE", "Video erişilemiyor veya kaldırılmış olabilir.");
