@@ -98,7 +98,7 @@ Türkçe karakter kullanabilirsin ama JSON yapısını bozma.
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+     model: "gemini-2.0-flash",
       contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 0 },
