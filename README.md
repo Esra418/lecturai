@@ -122,6 +122,28 @@ features/
 - ✅ AI koçuna soru sorar
 - ✅ Gelişimini dashboard'dan takip eder
 
+- ## 📸 Ekran Görüntüleri
+
+![](assets/Ekran%20Görüntüsü%20(372).png)
+![](assets/Ekran%20Görüntüsü%20(373).png)
+![](assets/Ekran%20Görüntüsü%20(374).png)
+![](assets/Ekran%20Görüntüsü%20(375).png)
+![](assets/Ekran%20Görüntüsü%20(376).png)
+![](assets/Ekran%20Görüntüsü%20(377).png)
+![](assets/Ekran%20Görüntüsü%20(378).png)
+![](assets/Ekran%20Görüntüsü%20(379).png)
+![](assets/Ekran%20Görüntüsü%20(380).png)
+![](assets/Ekran%20Görüntüsü%20(381).png)
+![](assets/Ekran%20Görüntüsü%20(382).png)
+![](assets/Ekran%20Görüntüsü%20(383).png)
+![](assets/Ekran%20Görüntüsü%20(384).png)
+![](assets/Ekran%20Görüntüsü%20(385).png)
+![](assets/Ekran%20Görüntüsü%20(386).png)
+![](assets/Ekran%20Görüntüsü%20(387).png)
+![](assets/Ekran%20Görüntüsü%20(388).png)
+![](assets/Ekran%20Görüntüsü%20(389).png)
+![](assets/Ekran%20Görüntüsü%20(390).png)
+
 ---
 
 ## 👩‍💻 Geliştirici
