@@ -9,13 +9,13 @@
 
 ## 💡 Problem
 
-Üniversite öğrencileri sınava hazırlıkta 2+ saatlik YouTube ders videolarını baştan sona izlemek zorunda kalıyor. Videonun yalnızca birkaç kritik dakikası sınav konusunu içeriyor — ama hangi dakika olduğunu bilmiyorlar. Zaman kaybı, motivasyon düşüşü ve verimsiz çalışma döngüsü.
+Öğrenciler sınava hazırlıkta 2+ saatlik YouTube ders videolarını baştan sona izlemek zorunda kalıyor. Videonun yalnızca birkaç kritik dakikası sınav konusunu içeriyor — ama hangi dakika olduğunu bilmiyorlar. Zaman kaybı, motivasyon düşüşü ve verimsiz çalışma döngüsü.
 
 ---
 
 ## 🚀 Çözüm
 
-Lecturai, YouTube ders videosu linkini yapıştırınca **60 saniyede** şunları sunar:
+Lecturai, YouTube ders videosu linkini yapıştırınca şunları sunar:
 
 ### 📖 Akıllı Ders Notları
 - Videonun içeriğinden otomatik bölüm bazlı ders notları
