@@ -3,7 +3,7 @@
 > YouTube ders videolarındaki kritik dakikaları saniyeler içinde bul, o ana atla ve sınava odaklan.
 
 🔗 **Canlı Site:** [lecturai-jade.vercel.app](https://lecturai-jade.vercel.app)  
-🎬 **Demo Video:** *(yakında eklenecek)*
+🎬 **Demo Video:** [İzle](https://www.loom.com/share/fb61d4446d6140058f225f4656cb3fce)
 
 ---
 
